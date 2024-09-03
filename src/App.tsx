@@ -1,11 +1,11 @@
 import "./App.css";
-import { CaretPostionTest } from "./components/CaretPostionTest";
+import { DualTextEditors } from "./components/DualTextEditors";
 
 function App() {
     return (
         <div className="w-100vw h-[100vh] bg-black flex justify-center">
-            <div className="w-[720px] h-full p-4">
-                <CaretPostionTest />
+            <div className="w-[1600px] p-4">
+                <DualTextEditors />
             </div>
         </div>
     );
