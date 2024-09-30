@@ -49,6 +49,7 @@ export const DualTextEditors = () => {
         editorRefB.current?.setValue(get_character_sequence(root_cdtr));
         console.log(root_cdtr);
     };
+
     const handeOnChangeEditorB = (
         value: string | undefined,
         ev: editor.IModelContentChangedEvent
