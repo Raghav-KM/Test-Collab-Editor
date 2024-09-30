@@ -4,7 +4,7 @@ import {
     OnMount,
 } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { crdt_node } from "../../../CRDTs/LSEQ/src/types";
 import {
     get_character_sequence,
