@@ -3,9 +3,9 @@ import { init_tree } from "../../../CRDTs/LSEQ/src/crdt";
 import { CollaborativeEditor } from "../components/CollaborativeEditor";
 import { editor } from "monaco-editor";
 
-export const DaulEdtorPage = () => {
-    const root_crdtA = init_tree();
-    const root_crdtB = init_tree();
+export const DualEdtorPage = () => {
+    const root_crdtA = init_tree(0);
+    const root_crdtB = init_tree(1);
     const editorRefA = useRef<editor.IStandaloneCodeEditor | null>(null);
     const editorRefB = useRef<editor.IStandaloneCodeEditor | null>(null);
 

@@ -38,6 +38,7 @@ export const CollaborativeEditor = ({
                     pos: ev.changes[0].rangeOffset,
                     value: ev.changes[0].text,
                     type: "insert",
+                    priority: root_crdt.id.priority,
                 }
             );
             perform_crdt_operation(
@@ -55,6 +56,7 @@ export const CollaborativeEditor = ({
                     pos: ev.changes[0].rangeOffset,
                     value: "",
                     type: "delete",
+                    priority: root_crdt.id.priority,
                 }
             );
             perform_crdt_operation(
