@@ -4,7 +4,7 @@ import {
     OnMount,
 } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { crdt_node } from "../../../CRDTs/LSEQ/src/types";
 import {
     get_character_sequence,
@@ -12,6 +12,9 @@ import {
     perform_normal_operation,
 } from "../../../CRDTs/LSEQ/src/crdt";
 
+import { ServerMessageType } from "../../backend/src/types";
+
+const BACKEND_URL = "ws://localhost:3000";
 export const CollaborativeEditor = ({
     root_crdt,
     root_editorRef,
@@ -23,16 +26,51 @@ export const CollaborativeEditor = ({
     other_crdt: crdt_node;
     other_editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
 }) => {
+    const [socket, setSocket] = useState<WebSocket | null>(null);
+    useEffect(() => {
+        const new_socket = new WebSocket(`${BACKEND_URL}`);
+
+        new_socket.onopen = () => {
+            console.log("Web Socket Connection Successfull");
+            setSocket(new_socket);
+        };
+
+        new_socket.onmessage = (message) => {
+            try {
+                const parsed_message = JSON.parse(
+                    message.data
+                ) as ServerMessageType;
+                // console.log(parsed_message);
+                perform_crdt_operation(root_crdt, parsed_message.operation);
+                root_editorRef.current?.setValue(
+                    get_character_sequence(root_crdt)
+                );
+            } catch (ex) {
+                console.log("Invalid Server Message");
+            }
+        };
+
+        new_socket.onclose = () => {
+            console.log("Disconnected from server");
+            setSocket(null);
+        };
+
+        return () => {
+            new_socket.close();
+        };
+    }, []);
+
     const handleOnChange = (
         value: string | undefined,
         ev: editor.IModelContentChangedEvent
     ) => {
         value = value;
         if (ev.isFlush) return;
-        // Perform Operation on the Local CRDT
 
         let op_id;
-        console.log("Local Operation : ", root_crdt.id.priority);
+        // console.log("Local Operation : ", root_crdt.id.priority);
+        let operation = {};
+
         if (ev.changes[0].text != "") {
             op_id = perform_normal_operation(root_crdt, {
                 pos: ev.changes[0].rangeOffset,
@@ -40,11 +78,12 @@ export const CollaborativeEditor = ({
                 type: "insert",
                 priority: root_crdt.id.priority,
             });
-            perform_crdt_operation(other_crdt, {
+
+            operation = {
                 id: op_id,
                 value: ev.changes[0].text,
                 type: "insert",
-            });
+            };
         } else {
             op_id = perform_normal_operation(root_crdt, {
                 pos: ev.changes[0].rangeOffset,
@@ -52,18 +91,28 @@ export const CollaborativeEditor = ({
                 type: "delete",
                 priority: root_crdt.id.priority,
             });
-            perform_crdt_operation(other_crdt, {
+            operation = {
                 id: op_id,
                 value: "",
                 type: "delete",
-            });
+            };
         }
-        other_editorRef.current?.setValue(get_character_sequence(other_crdt));
+
+        // other_editorRef.current?.setValue(get_character_sequence(other_crdt));
+        socket?.send(
+            JSON.stringify({
+                operation: operation,
+            })
+        );
     };
 
     return (
         <div className="w-full h-full">
-            <Editor editorRef={root_editorRef} onChange={handleOnChange} />
+            {socket ? (
+                <Editor editorRef={root_editorRef} onChange={handleOnChange} />
+            ) : (
+                <div> </div>
+            )}
         </div>
     );
 };
