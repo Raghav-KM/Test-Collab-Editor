@@ -5,12 +5,12 @@ import {
 } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import React, { useEffect, useState } from "react";
-import { crdt_node } from "../../../CRDTs/LSEQ/src/types";
+import { crdt_node } from "../lseq/types";
 import {
     get_character_sequence,
     perform_crdt_operation,
     perform_normal_operation,
-} from "../../../CRDTs/LSEQ/src/crdt";
+} from "../lseq/crdt";
 
 import { ServerMessageType } from "../../backend/src/types";
 
