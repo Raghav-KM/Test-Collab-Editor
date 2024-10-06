@@ -14,7 +14,7 @@ import {
 
 import { ServerMessageType } from "../../backend/src/types";
 
-const BACKEND_URL = "ws://localhost:3000";
+const BACKEND_URL = "ws://13.233.75.200:4000";
 export const CollaborativeEditor = ({
     root_crdt,
     root_editorRef,
