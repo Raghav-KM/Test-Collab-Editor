@@ -15,16 +15,12 @@ export const DualEdtorPage = () => {
                 <CollaborativeEditor
                     root_crdt={root_crdtA}
                     root_editorRef={editorRefA}
-                    other_crdt={root_crdtB}
-                    other_editorRef={editorRefB}
                 />
             </div>
             <div className="w-[50vw] h-full bg-white">
                 <CollaborativeEditor
                     root_crdt={root_crdtB}
                     root_editorRef={editorRefB}
-                    other_crdt={root_crdtA}
-                    other_editorRef={editorRefA}
                 />
             </div>
         </div>

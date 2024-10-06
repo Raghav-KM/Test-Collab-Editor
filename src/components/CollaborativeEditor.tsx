@@ -18,13 +18,9 @@ const BACKEND_URL = "ws://localhost:3000";
 export const CollaborativeEditor = ({
     root_crdt,
     root_editorRef,
-    other_crdt,
-    other_editorRef,
 }: {
     root_crdt: crdt_node;
     root_editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
-    other_crdt: crdt_node;
-    other_editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
 }) => {
     const [socket, setSocket] = useState<WebSocket | null>(null);
     useEffect(() => {
@@ -45,6 +41,7 @@ export const CollaborativeEditor = ({
                 root_editorRef.current?.setValue(
                     get_character_sequence(root_crdt)
                 );
+                // console.log(root_crdt);
             } catch (ex) {
                 console.log("Invalid Server Message");
             }
@@ -68,7 +65,6 @@ export const CollaborativeEditor = ({
         if (ev.isFlush) return;
 
         let op_id;
-        // console.log("Local Operation : ", root_crdt.id.priority);
         let operation = {};
 
         if (ev.changes[0].text != "") {
@@ -98,7 +94,6 @@ export const CollaborativeEditor = ({
             };
         }
 
-        // other_editorRef.current?.setValue(get_character_sequence(other_crdt));
         socket?.send(
             JSON.stringify({
                 operation: operation,
