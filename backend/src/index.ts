@@ -3,7 +3,7 @@ import { WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
 import { ClientMessageType, ServerMessageType } from "./types";
 
-const PORT = 3000;
+const PORT = 4000;
 const app = express();
 const http_server = app.listen(PORT, () => {
     console.log(`Listening to Port ${PORT}`);
