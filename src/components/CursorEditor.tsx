@@ -8,15 +8,88 @@ export const CursorEditor = () => {
 
     const handleOnChange: OnChange = () => {};
 
+    const convertIndexToPosition = (
+        model: editor.ITextModel,
+        index: number
+    ) => {
+        return model.getPositionAt(index);
+    };
+
+    const random_insert_operation = (
+        text: string
+    ): {
+        insert_index: number;
+        inserted_char: string;
+        updated_text: string;
+    } => {
+        const insert_index = Math.floor(Math.random() * (text.length + 1));
+        const inserted_char = Math.random() < 0.8 ? "[" : "\n";
+        const updated_text =
+            text.slice(0, insert_index) +
+            inserted_char +
+            text.slice(insert_index);
+        return {
+            insert_index,
+            inserted_char,
+            updated_text,
+        };
+    };
+
     const interval_function = () => {
-        editorRef.current?.setValue("[" + editorRef.current.getValue());
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        const position = editor.getPosition();
+        if (!position) return;
+
+        const { insert_index, inserted_char, updated_text } =
+            random_insert_operation(editor.getValue());
+
+        const insert_position = convertIndexToPosition(
+            editor.getModel()!,
+            insert_index
+        );
+
+        editor.setValue(updated_text);
+        if (inserted_char == "\n") {
+            if (insert_position.lineNumber == position.lineNumber) {
+                if (insert_position.column >= position.column) {
+                    editor.setPosition(position);
+                } else {
+                    editor.setPosition({
+                        lineNumber: position.lineNumber + 1,
+                        column: position.column - insert_position.column,
+                    });
+                }
+            } else if (insert_position.lineNumber < position.lineNumber) {
+                editor.setPosition({
+                    ...position,
+                    lineNumber: position.lineNumber + 1,
+                });
+            } else {
+                editor.setPosition(position);
+            }
+        } else {
+            if (insert_position.lineNumber == position.lineNumber) {
+                if (insert_position.column <= position.column) {
+                    editor.setPosition({
+                        ...position,
+                        column: position.column + 1,
+                    });
+                } else {
+                    editor.setPosition(position);
+                }
+            } else {
+                editor.setPosition(position);
+            }
+        }
     };
 
     const handleOnStart = () => {
         if (intervalId) {
             clearInterval(intervalId);
         }
-        const id = setInterval(interval_function, 3000);
+        const id = setInterval(interval_function, 500);
         setIntervalId(id);
     };
 
@@ -28,7 +101,7 @@ export const CursorEditor = () => {
     };
 
     return (
-        <div className="w-1/2 h-full flex flex-col gap-2">
+        <div className="w-full h-full flex flex-col gap-2">
             <div className="w-full flex-grow ">
                 <Editor editorRef={editorRef} onChange={handleOnChange} />
             </div>
