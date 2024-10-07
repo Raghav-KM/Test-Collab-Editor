@@ -2,6 +2,7 @@ import { OnChange, OnMount } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { Editor as MonacoEditor } from "@monaco-editor/react";
 import { useRef, useState } from "react";
+import { Range } from "monaco-editor";
 export const CursorEditor = () => {
     const [intervalId, setIntervalId] = useState<number | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -15,6 +16,28 @@ export const CursorEditor = () => {
         return model.getPositionAt(index);
     };
 
+    const addCursorDecoration = (
+        editor: editor.IStandaloneCodeEditor,
+        lineNumber: number,
+        column: number
+    ) => {
+        // Create the decoration object
+        const decoration = editor.deltaDecorations(
+            [],
+            [
+                {
+                    range: new Range(lineNumber, column, lineNumber, column),
+                    options: {
+                        className: "border-s-2 border-red-500",
+                        isWholeLine: false,
+                    },
+                },
+            ]
+        );
+
+        return decoration;
+    };
+
     const random_insert_operation = (
         text: string
     ): {
@@ -22,12 +45,19 @@ export const CursorEditor = () => {
         inserted_char: string;
         updated_text: string;
     } => {
+        const characters =
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\n";
+
         const insert_index = Math.floor(Math.random() * (text.length + 1));
-        const inserted_char = Math.random() < 0.8 ? "[" : "\n";
+
+        const inserted_char =
+            characters[Math.floor(Math.random() * characters.length)];
+
         const updated_text =
             text.slice(0, insert_index) +
             inserted_char +
             text.slice(insert_index);
+
         return {
             insert_index,
             inserted_char,
@@ -51,6 +81,8 @@ export const CursorEditor = () => {
         );
 
         editor.setValue(updated_text);
+        const old_selection = editor.getSelections()![0];
+
         if (inserted_char == "\n") {
             if (insert_position.lineNumber == position.lineNumber) {
                 if (insert_position.column >= position.column) {
@@ -83,6 +115,11 @@ export const CursorEditor = () => {
                 editor.setPosition(position);
             }
         }
+        addCursorDecoration(
+            editor,
+            insert_position.lineNumber,
+            insert_position.column
+        );
     };
 
     const handleOnStart = () => {
@@ -142,7 +179,7 @@ const Editor = ({
                 options={{ fontSize: 18 }}
                 onMount={handelOnMount}
                 onChange={onChange}
-                defaultValue=""
+                defaultValue="Hello From the DEFAULT VALUE"
             />
         </div>
     );
