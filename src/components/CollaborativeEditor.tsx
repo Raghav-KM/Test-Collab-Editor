@@ -6,15 +6,13 @@ import {
 import { editor } from "monaco-editor";
 import React, { useEffect, useState } from "react";
 import { crdt_node } from "../lseq/types";
-import {
-    get_character_sequence,
-    perform_crdt_operation,
-    perform_normal_operation,
-} from "../lseq/crdt";
+import { perform_normal_operation } from "../lseq/crdt";
 
 import { ServerMessageType } from "../../backend/src/types";
+import { perform_opertation_locally } from "./CursorEditor";
 
 const BACKEND_URL = "wss://collab-editor.project-raghav.in";
+
 export const CollaborativeEditor = ({
     root_crdt,
     root_editorRef,
@@ -37,10 +35,13 @@ export const CollaborativeEditor = ({
                     message.data
                 ) as ServerMessageType;
                 // console.log(parsed_message);
-                perform_crdt_operation(root_crdt, parsed_message.operation);
-                root_editorRef.current?.setValue(
-                    get_character_sequence(root_crdt)
+
+                perform_opertation_locally(
+                    parsed_message.operation,
+                    root_editorRef.current!,
+                    root_crdt
                 );
+
                 // console.log(root_crdt);
             } catch (ex) {
                 console.log("Invalid Server Message");

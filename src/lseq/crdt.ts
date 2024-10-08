@@ -73,6 +73,7 @@ export function perform_normal_operation(
 }
 
 export function insert_node_at(root: crdt_node, node: crdt_node) {
+    let pos = 0;
     function dfs(u: crdt_node, level: number): boolean {
         if (level == node.level - 1 && u.id.seq[level] == node.id.seq[level]) {
             u.children.push(node);
@@ -92,9 +93,11 @@ export function insert_node_at(root: crdt_node, node: crdt_node) {
         }
     }
     dfs(root, 0);
+    return pos;
 }
 
 export function delete_node_at(root: crdt_node, delete_id: crdt_id) {
+    const pos = 0;
     function dfs(u: crdt_node, level: number) {
         if (u.level > delete_id.seq.length - 1) return;
         if (
@@ -112,6 +115,7 @@ export function delete_node_at(root: crdt_node, delete_id: crdt_id) {
         }
     }
     dfs(root, 0);
+    return pos;
 }
 
 export function get_crdt_id_between(
@@ -227,6 +231,23 @@ export function get_crdt_id(
             priority: -1,
         };
     }
+}
+
+export function get_position_by_id(u: crdt_node, id: crdt_id): number {
+    let pos = 0;
+    const dfs = (u: crdt_node): boolean => {
+        if (JSON.stringify(u.id) == JSON.stringify(id)) {
+            return true;
+        } else {
+            if (!u.deleted) pos++;
+            for (const v of u.children) {
+                if (dfs(v)) return true;
+            }
+            return false;
+        }
+    };
+    dfs(u);
+    return pos;
 }
 
 export function get_character_sequence(u: crdt_node): string {

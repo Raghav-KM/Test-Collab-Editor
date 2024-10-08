@@ -1,11 +1,11 @@
 import "./App.css";
-import { CursorEditor } from "./components/CursorEditor";
+import { DualEdtorPage } from "./pages/DualEditorsPage";
 
 function App() {
     return (
         <div className="w-80vw h-[100vh] bg-black flex justify-center p-4">
-            {/* <DualEdtorPage /> */}
-            <CursorEditor />
+            <DualEdtorPage />
+            {/* <CursorEditor /> */}
         </div>
     );
 }

@@ -3,40 +3,91 @@ import { editor } from "monaco-editor";
 import { Editor as MonacoEditor } from "@monaco-editor/react";
 import { useRef, useState } from "react";
 import { Range } from "monaco-editor";
+import { crdt_node, crdt_operation } from "../lseq/types";
+import {
+    get_character_sequence,
+    get_position_by_id,
+    perform_crdt_operation,
+} from "../lseq/crdt";
+
+const addCursorDecoration = (
+    editor: editor.IStandaloneCodeEditor,
+    lineNumber: number,
+    column: number
+) => {
+    const decoration = editor.deltaDecorations(
+        [],
+        [
+            {
+                range: new Range(lineNumber, column, lineNumber, column),
+                options: {
+                    className: "border-s-2 border-red-500",
+                    isWholeLine: false,
+                },
+            },
+        ]
+    );
+
+    return decoration;
+};
+
+export const perform_opertation_locally = (
+    operation: crdt_operation,
+    editor: editor.IStandaloneCodeEditor,
+    root_crdt: crdt_node
+) => {
+    const initial_position = editor.getPosition();
+    perform_crdt_operation(root_crdt, operation);
+    const insert_index = get_position_by_id(root_crdt, operation.id);
+    const insert_position = editor.getModel()?.getPositionAt(insert_index);
+    if (!insert_position || !initial_position) return;
+    editor.setValue(get_character_sequence(root_crdt));
+
+    if (operation.value == "\n") {
+        if (insert_position.lineNumber == initial_position.lineNumber) {
+            if (insert_position.column >= initial_position.column) {
+                editor.setPosition(initial_position);
+            } else {
+                editor.setPosition({
+                    lineNumber: initial_position.lineNumber + 1,
+                    column: initial_position.column - insert_position.column,
+                });
+            }
+        } else if (insert_position.lineNumber < initial_position.lineNumber) {
+            editor.setPosition({
+                ...initial_position,
+                lineNumber: initial_position.lineNumber + 1,
+            });
+        } else {
+            editor.setPosition(initial_position);
+        }
+    } else {
+        if (insert_position.lineNumber == initial_position.lineNumber) {
+            if (insert_position.column <= initial_position.column) {
+                editor.setPosition({
+                    ...initial_position,
+                    column: initial_position.column + 1,
+                });
+            } else {
+                editor.setPosition(initial_position);
+            }
+        } else {
+            editor.setPosition(initial_position);
+        }
+    }
+    console.log(insert_position);
+    addCursorDecoration(
+        editor,
+        insert_position.lineNumber,
+        insert_position.column + 1
+    );
+};
+
 export const CursorEditor = () => {
     const [intervalId, setIntervalId] = useState<number | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
     const handleOnChange: OnChange = () => {};
-
-    const convertIndexToPosition = (
-        model: editor.ITextModel,
-        index: number
-    ) => {
-        return model.getPositionAt(index);
-    };
-
-    const addCursorDecoration = (
-        editor: editor.IStandaloneCodeEditor,
-        lineNumber: number,
-        column: number
-    ) => {
-        // Create the decoration object
-        const decoration = editor.deltaDecorations(
-            [],
-            [
-                {
-                    range: new Range(lineNumber, column, lineNumber, column),
-                    options: {
-                        className: "border-s-2 border-red-500",
-                        isWholeLine: false,
-                    },
-                },
-            ]
-        );
-
-        return decoration;
-    };
 
     const random_insert_operation = (
         text: string
@@ -68,58 +119,7 @@ export const CursorEditor = () => {
     const interval_function = () => {
         const editor = editorRef.current;
         if (!editor) return;
-
-        const position = editor.getPosition();
-        if (!position) return;
-
-        const { insert_index, inserted_char, updated_text } =
-            random_insert_operation(editor.getValue());
-
-        const insert_position = convertIndexToPosition(
-            editor.getModel()!,
-            insert_index
-        );
-
-        editor.setValue(updated_text);
-        const old_selection = editor.getSelections()![0];
-
-        if (inserted_char == "\n") {
-            if (insert_position.lineNumber == position.lineNumber) {
-                if (insert_position.column >= position.column) {
-                    editor.setPosition(position);
-                } else {
-                    editor.setPosition({
-                        lineNumber: position.lineNumber + 1,
-                        column: position.column - insert_position.column,
-                    });
-                }
-            } else if (insert_position.lineNumber < position.lineNumber) {
-                editor.setPosition({
-                    ...position,
-                    lineNumber: position.lineNumber + 1,
-                });
-            } else {
-                editor.setPosition(position);
-            }
-        } else {
-            if (insert_position.lineNumber == position.lineNumber) {
-                if (insert_position.column <= position.column) {
-                    editor.setPosition({
-                        ...position,
-                        column: position.column + 1,
-                    });
-                } else {
-                    editor.setPosition(position);
-                }
-            } else {
-                editor.setPosition(position);
-            }
-        }
-        addCursorDecoration(
-            editor,
-            insert_position.lineNumber,
-            insert_position.column
-        );
+        random_insert_operation("");
     };
 
     const handleOnStart = () => {
