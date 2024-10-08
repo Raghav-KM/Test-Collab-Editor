@@ -11,18 +11,10 @@ export const DualEdtorPage = () => {
 
     return (
         <div className="w-full h-full flex flex-row gap-4 p-4">
-            <div className="w-[50vw] h-full bg-white">
-                <CollaborativeEditor
-                    root_crdt={root_crdtA}
-                    root_editorRef={editorRefA}
-                />
-            </div>
-            {/* <div className="w-[50vw] h-full bg-white">
-                <CollaborativeEditor
-                    root_crdt={root_crdtB}
-                    root_editorRef={editorRefB}
-                />
-            </div> */}
+            <CollaborativeEditor
+                root_crdt={root_crdtA}
+                root_editorRef={editorRefA}
+            />
         </div>
     );
 };

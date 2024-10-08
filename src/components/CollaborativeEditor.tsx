@@ -6,7 +6,7 @@ import {
 import { editor } from "monaco-editor";
 import React, { useEffect, useState } from "react";
 import { crdt_node } from "../lseq/types";
-import { perform_normal_operation } from "../lseq/crdt";
+import { get_character_sequence, perform_normal_operation } from "../lseq/crdt";
 
 import { ServerMessageType } from "../../backend/src/types";
 import { perform_opertation_locally } from "./CursorEditor";
@@ -21,7 +21,11 @@ export const CollaborativeEditor = ({
     root_editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
 }) => {
     const [socket, setSocket] = useState<WebSocket | null>(null);
+
+    const [text, setText] = useState("");
+
     useEffect(() => {
+        setText("");
         const new_socket = new WebSocket(`${BACKEND_URL}`);
 
         new_socket.onopen = () => {
@@ -34,15 +38,13 @@ export const CollaborativeEditor = ({
                 const parsed_message = JSON.parse(
                     message.data
                 ) as ServerMessageType;
-                // console.log(parsed_message);
 
                 perform_opertation_locally(
                     parsed_message.operation,
                     root_editorRef.current!,
                     root_crdt
                 );
-
-                // console.log(root_crdt);
+                setText(get_character_sequence(root_crdt));
             } catch (ex) {
                 console.log("Invalid Server Message");
             }
@@ -95,6 +97,7 @@ export const CollaborativeEditor = ({
             };
         }
 
+        setText(get_character_sequence(root_crdt));
         socket?.send(
             JSON.stringify({
                 operation: operation,
@@ -103,12 +106,20 @@ export const CollaborativeEditor = ({
     };
 
     return (
-        <div className="w-full h-full">
-            {socket ? (
-                <Editor editorRef={root_editorRef} onChange={handleOnChange} />
-            ) : (
-                <div> </div>
-            )}
+        <div className="w-full h-full flex flex-col gap-4">
+            <div className="w-full h-1/2">
+                {socket ? (
+                    <Editor
+                        editorRef={root_editorRef}
+                        onChange={handleOnChange}
+                    />
+                ) : (
+                    <div> </div>
+                )}
+            </div>
+            <div className="w-full h-1/2 bg-white p-3 font-mono text-lg">
+                {JSON.stringify(text)}
+            </div>
         </div>
     );
 };
