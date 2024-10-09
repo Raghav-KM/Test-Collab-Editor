@@ -61,10 +61,9 @@ export const CollaborativeEditor = ({
     }, []);
 
     const handleOnChange = (
-        value: string | undefined,
+        _value: string | undefined,
         ev: editor.IModelContentChangedEvent
     ) => {
-        value = value;
         if (ev.isFlush) return;
 
         let op_id;
@@ -97,6 +96,7 @@ export const CollaborativeEditor = ({
             };
         }
 
+        // console.log(JSON.stringify(_value));
         setText(get_character_sequence(root_crdt));
         socket?.send(
             JSON.stringify({
@@ -133,6 +133,7 @@ const Editor = ({
 }) => {
     const handelOnMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
         editorRef.current = editor;
+        editorRef.current.getModel()?.setEOL(0);
     };
     return (
         <div className="w-full h-full bg-white p-2">
@@ -140,7 +141,13 @@ const Editor = ({
                 height="100%"
                 width="100%"
                 theme="vs-light"
-                options={{ fontSize: 18 }}
+                options={{
+                    fontSize: 18,
+                    suggestOnTriggerCharacters: false,
+                    quickSuggestions: false,
+                    autoClosingBrackets: "never",
+                    autoClosingQuotes: "never",
+                }}
                 onMount={handelOnMount}
                 onChange={onChange}
                 defaultValue=""
