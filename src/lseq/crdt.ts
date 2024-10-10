@@ -6,10 +6,10 @@ import {
     OperationType,
 } from "./types";
 
-const RANGE = 16;
+const RANGE = 2048;
 
 export function init_tree(priority: number): crdt_node {
-    const begin = {
+    const begin: crdt_node = {
         id: { seq: [0, 0], priority: priority },
         value: "[",
         level: 1,
@@ -17,7 +17,15 @@ export function init_tree(priority: number): crdt_node {
         children: [],
     };
 
-    const end = {
+    const end_line: crdt_node = {
+        id: { seq: [0, RANGE - 1], priority: priority },
+        value: "\n",
+        level: 1,
+        deleted: false,
+        children: [],
+    };
+
+    const end: crdt_node = {
         id: { seq: [0, RANGE], priority: priority },
         value: "]",
         level: 1,
@@ -30,14 +38,14 @@ export function init_tree(priority: number): crdt_node {
         value: "_",
         level: 0,
         deleted: true,
-        children: [begin, end],
+        children: [begin, end_line, end],
     };
 
     return root;
 }
 
 export function perform_crdt_operation(root: crdt_node, op: crdt_operation) {
-    console.log(op.id);
+    // console.log(op.id);
     if (op.type == "insert") {
         insert_node_at(root, {
             id: op.id,
@@ -56,8 +64,8 @@ export function perform_normal_operation(
     op: normal_operation
 ): crdt_id {
     const op_id = get_crdt_id(root, op.pos, op.type);
+    op_id.priority = op.priority;
     if (op.type == "insert") {
-        op_id.priority = op.priority;
         insert_node_at(root, {
             id: op_id,
             value: op.value,
@@ -177,7 +185,7 @@ export function get_crdt_id(
         };
 
         function dfs(u: crdt_node): boolean {
-            if (!u.deleted) pos += u.value.length;
+            if (!u.deleted) pos++;
 
             siblings = {
                 prev_node: siblings.next_node,
@@ -205,7 +213,7 @@ export function get_crdt_id(
         let op_id: crdt_id = { seq: [], priority: -1 };
 
         function dfs(u: crdt_node): boolean {
-            if (!u.deleted) pos += u.value.length;
+            if (!u.deleted) pos++;
 
             if (pos == op_pos) {
                 op_id = u.id;
@@ -234,7 +242,7 @@ export function get_position_by_id(u: crdt_node, id: crdt_id): number {
         if (JSON.stringify(u.id) == JSON.stringify(id)) {
             return true;
         } else {
-            if (!u.deleted) pos += u.value.length;
+            if (!u.deleted) pos++;
             for (const v of u.children) {
                 if (dfs(v)) return true;
             }

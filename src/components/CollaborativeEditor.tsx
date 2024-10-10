@@ -1,4 +1,5 @@
 import {
+    Monaco,
     Editor as MonacoEditor,
     OnChange,
     OnMount,
@@ -7,7 +8,7 @@ import { editor, Position } from "monaco-editor";
 import React, { useState } from "react";
 import { get_character_sequence, perform_normal_operation } from "../lseq/crdt";
 import { Range } from "monaco-editor";
-import { crdt_node, crdt_operation } from "../lseq/types";
+import { crdt_node, crdt_operation, normal_operation } from "../lseq/types";
 import { get_position_by_id, perform_crdt_operation } from "../lseq/crdt";
 import { useSocket } from "../hooks/ws";
 import { ServerMessageType } from "../../backend/src/types";
@@ -77,8 +78,6 @@ export const perform_opertation_locally = (
     editor: editor.IStandaloneCodeEditor,
     root_crdt: crdt_node
 ) => {
-    console.log(operation);
-
     const initial_position = editor.getPosition();
     perform_crdt_operation(root_crdt, operation);
 
@@ -86,8 +85,7 @@ export const perform_opertation_locally = (
     const insert_position = editor.getModel()?.getPositionAt(insert_index);
 
     if (!insert_position || !initial_position) return;
-    editor.getModel()!.setValue(get_character_sequence(root_crdt));
-
+    editor.setValue(get_character_sequence(root_crdt));
     const updated_position = get_updated_cursor_postion(
         initial_position,
         insert_position,
@@ -97,8 +95,8 @@ export const perform_opertation_locally = (
 
     addCursorDecoration(
         editor,
-        insert_position.lineNumber,
-        insert_position.column + 1
+        insert_position.lineNumber + (operation.value == "\n" ? 1 : 0),
+        insert_position.column + (operation.value != "\n" ? 1 : 0)
     );
 };
 
@@ -116,7 +114,6 @@ export const CollaborativeEditor = ({
             const parsed_message = JSON.parse(
                 message.data
             ) as ServerMessageType;
-
             perform_opertation_locally(
                 parsed_message.operation,
                 root_editorRef.current!,
@@ -127,52 +124,45 @@ export const CollaborativeEditor = ({
             console.log("Invalid Server Message");
         }
     };
-    
+
     const socket = useSocket(handleOnMessage);
 
     const handleOnChange = (
         _value: string | undefined,
         ev: editor.IModelContentChangedEvent
     ) => {
-        console.log(
-            JSON.stringify(root_editorRef.current?.getModel()?.getEOL())
-        );
         if (ev.isFlush) return;
-
-        let op_id;
-        let operation = {};
+        let local_operation: normal_operation | null;
+        let global_operation: crdt_operation | null;
 
         if (ev.changes[0].text != "") {
-            op_id = perform_normal_operation(root_crdt, {
+            local_operation = {
                 pos: ev.changes[0].rangeOffset,
-                value: ev.changes[0].text,
+                value: ev.changes[0].text.replace(/\r\n/g, "\n"),
                 type: "insert",
                 priority: root_crdt.id.priority,
-            });
-
-            operation = {
-                id: op_id,
-                value: ev.changes[0].text,
-                type: "insert",
             };
         } else {
-            op_id = perform_normal_operation(root_crdt, {
+            local_operation = {
                 pos: ev.changes[0].rangeOffset,
                 value: "",
                 type: "delete",
                 priority: root_crdt.id.priority,
-            });
-            operation = {
-                id: op_id,
-                value: "",
-                type: "delete",
             };
         }
 
+        const op_id = perform_normal_operation(root_crdt, local_operation);
+        global_operation = {
+            id: op_id,
+            value: local_operation.value,
+            type: local_operation.type,
+        };
+
         setText(get_character_sequence(root_crdt));
+
         socket?.send(
             JSON.stringify({
-                operation: operation,
+                operation: global_operation,
             })
         );
     };
@@ -203,9 +193,14 @@ const Editor = ({
     editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
     onChange: OnChange;
 }) => {
-    const handelOnMount: OnMount = (edtr: editor.IStandaloneCodeEditor) => {
+    const handelOnMount: OnMount = (
+        edtr: editor.IStandaloneCodeEditor,
+        _monaco: Monaco
+    ) => {
         editorRef.current = edtr;
+        editorRef.current.getModel()?.setValue("\n");
     };
+
     return (
         <div className="w-full h-full bg-white p-2">
             <MonacoEditor
