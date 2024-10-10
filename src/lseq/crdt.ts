@@ -68,12 +68,10 @@ export function perform_normal_operation(
     } else if (op.type == "delete") {
         delete_node_at(root, op_id);
     }
-    // console.log(op_id);
     return op_id;
 }
 
 export function insert_node_at(root: crdt_node, node: crdt_node) {
-    let pos = 0;
     function dfs(u: crdt_node, level: number): boolean {
         if (level == node.level - 1 && u.id.seq[level] == node.id.seq[level]) {
             u.children.push(node);
@@ -93,11 +91,9 @@ export function insert_node_at(root: crdt_node, node: crdt_node) {
         }
     }
     dfs(root, 0);
-    return pos;
 }
 
 export function delete_node_at(root: crdt_node, delete_id: crdt_id) {
-    const pos = 0;
     function dfs(u: crdt_node, level: number) {
         if (u.level > delete_id.seq.length - 1) return;
         if (
@@ -115,7 +111,6 @@ export function delete_node_at(root: crdt_node, delete_id: crdt_id) {
         }
     }
     dfs(root, 0);
-    return pos;
 }
 
 export function get_crdt_id_between(
@@ -182,7 +177,7 @@ export function get_crdt_id(
         };
 
         function dfs(u: crdt_node): boolean {
-            if (!u.deleted) pos++;
+            if (!u.deleted) pos += u.value.length;
 
             siblings = {
                 prev_node: siblings.next_node,
@@ -210,7 +205,7 @@ export function get_crdt_id(
         let op_id: crdt_id = { seq: [], priority: -1 };
 
         function dfs(u: crdt_node): boolean {
-            if (!u.deleted) pos++;
+            if (!u.deleted) pos += u.value.length;
 
             if (pos == op_pos) {
                 op_id = u.id;
@@ -239,7 +234,7 @@ export function get_position_by_id(u: crdt_node, id: crdt_id): number {
         if (JSON.stringify(u.id) == JSON.stringify(id)) {
             return true;
         } else {
-            if (!u.deleted) pos++;
+            if (!u.deleted) pos += u.value.length;
             for (const v of u.children) {
                 if (dfs(v)) return true;
             }

@@ -7,3 +7,8 @@
    1. Performes the operatino on the local CRDT 
    2. Do a dfs traversal of the whole tree and get the Character Sequence that is represented by the local CRDT
    3. Display that Character Sequence in the text-area
+
+
+# TODO
+- [] Handle Cursor position during delete operations
+- [] WS connection getting disconnected after some time automatically

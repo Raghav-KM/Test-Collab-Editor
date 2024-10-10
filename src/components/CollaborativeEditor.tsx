@@ -3,15 +3,104 @@ import {
     OnChange,
     OnMount,
 } from "@monaco-editor/react";
-import { editor } from "monaco-editor";
-import React, { useEffect, useState } from "react";
-import { crdt_node } from "../lseq/types";
+import { editor, Position } from "monaco-editor";
+import React, { useState } from "react";
 import { get_character_sequence, perform_normal_operation } from "../lseq/crdt";
-
+import { Range } from "monaco-editor";
+import { crdt_node, crdt_operation } from "../lseq/types";
+import { get_position_by_id, perform_crdt_operation } from "../lseq/crdt";
+import { useSocket } from "../hooks/ws";
 import { ServerMessageType } from "../../backend/src/types";
-import { perform_opertation_locally } from "./CursorEditor";
 
-const BACKEND_URL = "wss://collab-editor.project-raghav.in";
+const addCursorDecoration = (
+    editor: editor.IStandaloneCodeEditor,
+    lineNumber: number,
+    column: number
+) => {
+    const decoration = editor.deltaDecorations(
+        [],
+        [
+            {
+                range: new Range(lineNumber, column, lineNumber, column),
+                options: {
+                    className: "border-s-2 border-red-500",
+                    isWholeLine: false,
+                },
+            },
+        ]
+    );
+
+    return decoration;
+};
+
+const get_updated_cursor_postion = (
+    initial_position: Position,
+    insert_position: Position,
+    operation: crdt_operation
+): Position => {
+    let updated_position: Position = initial_position;
+
+    if (operation.type == "insert") {
+        if (["\n", "\r\n"].includes(operation.value)) {
+            if (insert_position.lineNumber == initial_position.lineNumber) {
+                if (insert_position.column <= initial_position.column) {
+                    updated_position = {
+                        lineNumber: initial_position.lineNumber + 1,
+                        column:
+                            initial_position.column - insert_position.column,
+                    } as Position;
+                }
+            } else if (
+                insert_position.lineNumber < initial_position.lineNumber
+            ) {
+                updated_position = {
+                    column: initial_position.column,
+                    lineNumber: initial_position.lineNumber + 1,
+                } as Position;
+            }
+        } else {
+            if (insert_position.lineNumber == initial_position.lineNumber) {
+                if (insert_position.column <= initial_position.column) {
+                    updated_position = {
+                        ...initial_position,
+                        column: initial_position.column + 1,
+                    } as Position;
+                }
+            }
+        }
+    } else if (operation.type == "delete") {
+    }
+    return updated_position;
+};
+export const perform_opertation_locally = (
+    operation: crdt_operation,
+    editor: editor.IStandaloneCodeEditor,
+    root_crdt: crdt_node
+) => {
+    console.log(operation);
+
+    const initial_position = editor.getPosition();
+    perform_crdt_operation(root_crdt, operation);
+
+    const insert_index = get_position_by_id(root_crdt, operation.id);
+    const insert_position = editor.getModel()?.getPositionAt(insert_index);
+
+    if (!insert_position || !initial_position) return;
+    editor.getModel()!.setValue(get_character_sequence(root_crdt));
+
+    const updated_position = get_updated_cursor_postion(
+        initial_position,
+        insert_position,
+        operation
+    );
+    editor.setPosition(updated_position);
+
+    addCursorDecoration(
+        editor,
+        insert_position.lineNumber,
+        insert_position.column + 1
+    );
+};
 
 export const CollaborativeEditor = ({
     root_crdt,
@@ -20,50 +109,34 @@ export const CollaborativeEditor = ({
     root_crdt: crdt_node;
     root_editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
 }) => {
-    const [socket, setSocket] = useState<WebSocket | null>(null);
-
     const [text, setText] = useState("");
 
-    useEffect(() => {
-        setText("");
-        const new_socket = new WebSocket(`${BACKEND_URL}`);
+    const handleOnMessage = (message: MessageEvent<any>) => {
+        try {
+            const parsed_message = JSON.parse(
+                message.data
+            ) as ServerMessageType;
 
-        new_socket.onopen = () => {
-            console.log("Web Socket Connection Successfull");
-            setSocket(new_socket);
-        };
-
-        new_socket.onmessage = (message) => {
-            try {
-                const parsed_message = JSON.parse(
-                    message.data
-                ) as ServerMessageType;
-
-                perform_opertation_locally(
-                    parsed_message.operation,
-                    root_editorRef.current!,
-                    root_crdt
-                );
-                setText(get_character_sequence(root_crdt));
-            } catch (ex) {
-                console.log("Invalid Server Message");
-            }
-        };
-
-        new_socket.onclose = () => {
-            console.log("Disconnected from server");
-            setSocket(null);
-        };
-
-        return () => {
-            new_socket.close();
-        };
-    }, []);
+            perform_opertation_locally(
+                parsed_message.operation,
+                root_editorRef.current!,
+                root_crdt
+            );
+            setText(get_character_sequence(root_crdt));
+        } catch (ex) {
+            console.log("Invalid Server Message");
+        }
+    };
+    
+    const socket = useSocket(handleOnMessage);
 
     const handleOnChange = (
         _value: string | undefined,
         ev: editor.IModelContentChangedEvent
     ) => {
+        console.log(
+            JSON.stringify(root_editorRef.current?.getModel()?.getEOL())
+        );
         if (ev.isFlush) return;
 
         let op_id;
@@ -96,7 +169,6 @@ export const CollaborativeEditor = ({
             };
         }
 
-        // console.log(JSON.stringify(_value));
         setText(get_character_sequence(root_crdt));
         socket?.send(
             JSON.stringify({
@@ -131,9 +203,8 @@ const Editor = ({
     editorRef: React.MutableRefObject<editor.IStandaloneCodeEditor | null>;
     onChange: OnChange;
 }) => {
-    const handelOnMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
-        editorRef.current = editor;
-        editorRef.current.getModel()?.setEOL(0);
+    const handelOnMount: OnMount = (edtr: editor.IStandaloneCodeEditor) => {
+        editorRef.current = edtr;
     };
     return (
         <div className="w-full h-full bg-white p-2">
