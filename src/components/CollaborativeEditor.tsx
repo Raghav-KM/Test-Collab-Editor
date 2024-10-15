@@ -59,25 +59,60 @@ export const CollaborativeEditor = ({
 
         if (!insert_position || !initial_position) return;
         // editor.setValue(get_character_sequence(root_crdt));
+        // console.log(insert_position);
+        let editor_operation;
 
-        const editor_operation = {
-            range: new Range(
-                insert_position.lineNumber,
-                insert_position.column + (operation.type == "delete" ? 1 : 0),
-                insert_position.lineNumber,
-                insert_position.column
-            ),
-            text: operation.value,
-            forceMoveMarkers: true,
-        };
+        if (operation.type == "delete") {
+            if (editor.getModel()?.getValue()[insert_index] == "\n") {
+                editor_operation = {
+                    range: new Range(
+                        insert_position.lineNumber,
+                        insert_position.column,
+                        insert_position.lineNumber + 1,
+                        1
+                    ),
+                    text: "",
+                    forceMoveMarkers: true,
+                };
+            } else {
+                editor_operation = {
+                    range: new Range(
+                        insert_position.lineNumber,
+                        insert_position.column,
+                        insert_position.lineNumber,
+                        insert_position.column + 1
+                    ),
+                    text: "",
+                    forceMoveMarkers: true,
+                };
+            }
+        } else if (operation.type == "insert") {
+            editor_operation = {
+                range: new Range(
+                    insert_position.lineNumber,
+                    insert_position.column,
+                    insert_position.lineNumber,
+                    insert_position.column
+                ),
+                text: operation.value,
+                forceMoveMarkers: true,
+            };
+        }
 
-        console.log(editor_operation);
-        editor.getModel()?.applyEdits([editor_operation]);
+        // console.log(editor_operation);
+        editor.getModel()?.applyEdits([editor_operation!]);
+
+        const post_insert_index =
+            operation.type == "insert" ? insert_index + 1 : insert_index;
+
+        const post_insert_position = editor
+            .getModel()
+            ?.getPositionAt(post_insert_index);
 
         addCursorDecoration(
             editor,
-            insert_position.lineNumber + (operation.value == "\n" ? 1 : 0),
-            insert_position.column + (operation.value != "\n" ? 1 : 0)
+            post_insert_position!.lineNumber,
+            post_insert_position!.column
         );
     };
 
@@ -129,7 +164,7 @@ export const CollaborativeEditor = ({
                 priority: root_crdt.id.priority,
             };
         }
-
+        // console.log(ev.changes[0].range);
         const op_id = perform_normal_operation(root_crdt, local_operation);
         global_operation = {
             id: op_id,
