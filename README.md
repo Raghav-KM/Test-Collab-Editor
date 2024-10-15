@@ -10,5 +10,8 @@
 
 
 # TODO
-- [] Handle Cursor position during delete operations
+- [x] Handle Cursor position during delete operations
 - [] WS connection getting disconnected after some time automatically
+- [] Fix cursor decoration issue
+- [] Design the (other-people) cursor
+- [] Have a copy of the crdt in the backend, when a new client joins, he will get the most recent crdt 
