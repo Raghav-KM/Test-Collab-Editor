@@ -164,7 +164,7 @@ export const CollaborativeEditor = ({
                 priority: root_crdt.id.priority,
             };
         }
-        console.log(ev.changes[0]);
+        // console.log(ev.changes[0]);
         const op_id = perform_normal_operation(root_crdt, local_operation);
         global_operation = {
             id: op_id,
