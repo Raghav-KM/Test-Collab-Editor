@@ -27,21 +27,53 @@ export const CollaborativeEditor = ({
     let ignoreOnChangeHandler = useRef(false);
 
     let decorationIds: string[] = [];
-    const addCursorDecoration = (lineNumber: number, column: number) => {
+    let editorDomNode: HTMLElement | null;
+    let prevtooltip: HTMLDivElement | null;
+
+    const addCursorDecoration = (
+        lineNumber: number,
+        column: number,
+        tooltipText: string
+    ) => {
         const editor = root_editorRef.current;
         if (!editor) return;
+
+        decorationIds = editor.deltaDecorations(decorationIds, []);
 
         decorationIds = editor.deltaDecorations(decorationIds, [
             {
                 range: new Range(lineNumber, column, lineNumber, column),
                 options: {
-                    className: "border-s-2 border-red-500",
+                    className:
+                        "border-s-4 border-red-600 opacity-80 rounded-lg",
                     isWholeLine: false,
                 },
             },
         ]);
 
-        return decorationIds;
+        const position = editor.getScrolledVisiblePosition({
+            lineNumber,
+            column,
+        });
+
+        if (position) {
+            editorDomNode = editor.getDomNode();
+            if (!editorDomNode) return;
+
+            const tooltip = document.createElement("div");
+            tooltip.className =
+                "px-[6px] py-[4px] absolute bg-red-600 rounded-tr-lg rounded-br-lg rounded-bl-lg z-10 text-[10px] text-white opacity-80 font-bold shadow-lg";
+            tooltip.textContent = tooltipText;
+            tooltip.style.pointerEvents = "none";
+            tooltip.style.left = `${position.left}px`;
+            tooltip.style.top = `${
+                position.top + editor.getTopForLineNumber(1) + 12
+            }px`;
+
+            if (prevtooltip) editorDomNode.removeChild(prevtooltip);
+            editorDomNode.appendChild(tooltip);
+            prevtooltip = tooltip;
+        }
     };
 
     const perform_opertation_locally = (
@@ -112,7 +144,8 @@ export const CollaborativeEditor = ({
 
         addCursorDecoration(
             post_operation_pos.lineNumber,
-            post_operation_pos.column
+            post_operation_pos.column,
+            "Other User"
         );
     };
 
@@ -223,6 +256,8 @@ const Editor = ({
                     quickSuggestions: false,
                     autoClosingBrackets: "never",
                     autoClosingQuotes: "never",
+                    autoIndent: "none",
+                    tabSize: 4,
                 }}
                 onMount={handelOnMount}
                 onChange={onChange}

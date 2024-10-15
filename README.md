@@ -14,4 +14,7 @@
 - [] WS connection getting disconnected after some time automatically
 - [] Fix cursor decoration issue
 - [] Design the (other-people) cursor
+- [] Desinge tooltip
 - [] Have a copy of the crdt in the backend, when a new client joins, he will get the most recent crdt 
+- [] Handle Multiple Cursor with different colors
+- [] Support Range Edits on CRDT
