@@ -17,14 +17,6 @@ export function init_tree(priority: number): crdt_node {
         children: [],
     };
 
-    const end_line: crdt_node = {
-        id: { seq: [0, RANGE - 1], priority: priority },
-        value: "\n",
-        level: 1,
-        deleted: false,
-        children: [],
-    };
-
     const end: crdt_node = {
         id: { seq: [0, RANGE], priority: priority },
         value: "]",
@@ -38,7 +30,7 @@ export function init_tree(priority: number): crdt_node {
         value: "_",
         level: 0,
         deleted: true,
-        children: [begin, end_line, end],
+        children: [begin, end],
     };
 
     return root;

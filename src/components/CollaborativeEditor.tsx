@@ -152,7 +152,7 @@ export const CollaborativeEditor = ({
         if (ev.changes[0].text != "") {
             local_operation = {
                 pos: ev.changes[0].rangeOffset,
-                value: ev.changes[0].text.replace(/\r\n/g, "\n"),
+                value: ev.changes[0].text,
                 type: "insert",
                 priority: root_crdt.id.priority,
             };
@@ -164,7 +164,7 @@ export const CollaborativeEditor = ({
                 priority: root_crdt.id.priority,
             };
         }
-        // console.log(ev.changes[0].range);
+        console.log(ev.changes[0]);
         const op_id = perform_normal_operation(root_crdt, local_operation);
         global_operation = {
             id: op_id,
@@ -212,7 +212,8 @@ const Editor = ({
         _monaco: Monaco
     ) => {
         editorRef.current = edtr;
-        editorRef.current.getModel()?.setValue("\n");
+        // editorRef.current.getModel()?.setValue("\n");
+        editorRef.current.getModel()?.setEOL(0);
     };
 
     return (
