@@ -24,15 +24,13 @@ export const CollaborativeEditor = ({
     useEffect(() => {
         setText("");
     }, []);
-
     let ignoreOnChangeHandler = useRef(false);
-    let decorationIds: string[] = [];
 
-    const addCursorDecoration = (
-        editor: editor.IStandaloneCodeEditor,
-        lineNumber: number,
-        column: number
-    ) => {
+    let decorationIds: string[] = [];
+    const addCursorDecoration = (lineNumber: number, column: number) => {
+        const editor = root_editorRef.current;
+        if (!editor) return;
+
         decorationIds = editor.deltaDecorations(decorationIds, [
             {
                 range: new Range(lineNumber, column, lineNumber, column),
@@ -48,27 +46,32 @@ export const CollaborativeEditor = ({
 
     const perform_opertation_locally = (
         operation: crdt_operation,
-        editor: editor.IStandaloneCodeEditor,
         root_crdt: crdt_node
     ) => {
-        const initial_position = editor.getPosition();
+        if (!root_editorRef.current || !root_editorRef.current.getModel())
+            return;
+
+        const editor: editor.IStandaloneCodeEditor = root_editorRef.current;
+        const model: editor.ITextModel = editor.getModel()!;
+
         perform_crdt_operation(root_crdt, operation);
 
-        const insert_index = get_position_by_id(root_crdt, operation.id);
-        const insert_position = editor.getModel()?.getPositionAt(insert_index);
+        const initial_pos = editor.getPosition();
+        const operation_index = get_position_by_id(root_crdt, operation.id);
+        const operation_pos = model.getPositionAt(operation_index);
 
-        if (!insert_position || !initial_position) return;
+        if (!initial_pos) return;
         // editor.setValue(get_character_sequence(root_crdt));
-        // console.log(insert_position);
-        let editor_operation;
+        // console.log(operation_pos);
 
+        let editor_operation;
         if (operation.type == "delete") {
-            if (editor.getModel()?.getValue()[insert_index] == "\n") {
+            if (model.getValue()[operation_index] == "\n") {
                 editor_operation = {
                     range: new Range(
-                        insert_position.lineNumber,
-                        insert_position.column,
-                        insert_position.lineNumber + 1,
+                        operation_pos.lineNumber,
+                        operation_pos.column,
+                        operation_pos.lineNumber + 1,
                         1
                     ),
                     text: "",
@@ -77,10 +80,10 @@ export const CollaborativeEditor = ({
             } else {
                 editor_operation = {
                     range: new Range(
-                        insert_position.lineNumber,
-                        insert_position.column,
-                        insert_position.lineNumber,
-                        insert_position.column + 1
+                        operation_pos.lineNumber,
+                        operation_pos.column,
+                        operation_pos.lineNumber,
+                        operation_pos.column + 1
                     ),
                     text: "",
                     forceMoveMarkers: true,
@@ -89,10 +92,10 @@ export const CollaborativeEditor = ({
         } else if (operation.type == "insert") {
             editor_operation = {
                 range: new Range(
-                    insert_position.lineNumber,
-                    insert_position.column,
-                    insert_position.lineNumber,
-                    insert_position.column
+                    operation_pos.lineNumber,
+                    operation_pos.column,
+                    operation_pos.lineNumber,
+                    operation_pos.column
                 ),
                 text: operation.value,
                 forceMoveMarkers: true,
@@ -100,19 +103,16 @@ export const CollaborativeEditor = ({
         }
 
         // console.log(editor_operation);
-        editor.getModel()?.applyEdits([editor_operation!]);
+        model.applyEdits([editor_operation!]);
 
-        const post_insert_index =
-            operation.type == "insert" ? insert_index + 1 : insert_index;
+        const post_operation_index =
+            operation.type == "insert" ? operation_index + 1 : operation_index;
 
-        const post_insert_position = editor
-            .getModel()
-            ?.getPositionAt(post_insert_index);
+        const post_operation_pos = model.getPositionAt(post_operation_index);
 
         addCursorDecoration(
-            editor,
-            post_insert_position!.lineNumber,
-            post_insert_position!.column
+            post_operation_pos.lineNumber,
+            post_operation_pos.column
         );
     };
 
@@ -123,11 +123,7 @@ export const CollaborativeEditor = ({
             ) as ServerMessageType;
 
             ignoreOnChangeHandler.current = true;
-            perform_opertation_locally(
-                parsed_message.operation,
-                root_editorRef.current!,
-                root_crdt
-            );
+            perform_opertation_locally(parsed_message.operation, root_crdt);
             setText(get_character_sequence(root_crdt));
         } catch (ex) {
             console.log("Invalid Server Message");
@@ -212,7 +208,6 @@ const Editor = ({
         _monaco: Monaco
     ) => {
         editorRef.current = edtr;
-        // editorRef.current.getModel()?.setValue("\n");
         editorRef.current.getModel()?.setEOL(0);
     };
 
